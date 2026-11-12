@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IFPI - Códigos POO | Marcos Idalino</title>
+  <link rel="stylesheet" href="https://cloudflare.com">
+  <style>
+    :root { --bg: #0f172a; --card: #1e293b; --text: #f8fafc; --muted: #94a3b8; --accent: #38bdf8; --border: #334155; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { background: var(--bg); color: var(--text); display: flex; flex-direction: column; min-height: 100vh; }
+    header { background: var(--card); border-bottom: 1px solid var(--border); padding: 1.2rem 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+    header h1 { font-size: 1.3rem; color: var(--accent); }
+    header p { font-size: 0.85rem; color: var(--muted); }
+    input#busca { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 0.6rem 1rem; border-radius: 8px; width: 280px; outline: none; }
+    input#busca:focus { border-color: var(--accent); }
+    main { display: grid; grid-template-columns: 320px 1fr; flex: 1; }
+    aside { background: var(--card); border-right: 1px solid var(--border); padding: 1rem; overflow-y: auto; max-height: calc(100vh - 75px); }
+    .pasta { margin-bottom: 1rem; }
+    .pasta-titulo { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); font-weight: bold; margin-bottom: 0.4rem; padding-left: 0.4rem; }
+    .arquivo { display: block; width: 100%; text-align: left; background: transparent; border: none; color: var(--text); padding: 0.45rem 0.6rem; border-radius: 6px; cursor: pointer; font-size: 0.9rem; transition: 0.15s; }
+    .arquivo:hover, .arquivo.ativo { background: rgba(56, 189, 248, 0.15); color: var(--accent); }
+    section.viewer { padding: 1.5rem 2rem; overflow-y: auto; max-height: calc(100vh - 75px); }
+    .viewer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.8rem; border-bottom: 1px solid var(--border); }
+    .btn-copiar { background: var(--accent); color: #0f172a; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    .btn-copiar:hover { opacity: 0.9; }
+    pre { border-radius: 10px; overflow-x: auto; border: 1px solid var(--border); }
+    code { font-family: 'Fira Code', 'Consolas', monospace; font-size: 0.92rem; line-height: 1.5; }
+    .vazio { color: var(--muted); text-align: center; margin-top: 4rem; }
+    @media (max-width: 768px) { main { grid-template-columns: 1fr; } aside, section.viewer { max-height: none; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>IFPI • Códigos de POO (Java)</h1>
+      <p>Repositório organizado de Marcos Idalino</p>
+    </div>
+    <input type="text" id="busca" placeholder="Pesquisar exercício ou classe...">
+  </header>
+  <main>
+    <aside id="lista-arquivos"><p class="vazio">Carregando códigos do GitHub...</p></aside>
+    <section class="viewer">
+      <div class="viewer-header" id="cabecalho-codigo" style="display:none;">
+        <h2 id="nome-arquivo" style="font-size:1.1rem;"></h2>
+        <button class="btn-copiar" onclick="copiarCodigo()">Copiar Código</button>
+      </div>
+      <div id="area-codigo"><p class="vazio">Selecione um arquivo Java no menu ao lado para visualizar o código.</p></div>
+    </section>
+  </main>
+  <script src="https://cloudflare.com"></script>
+  <script>
+    const usuario = "MarcosIdalino-netizen";
+    const repo = "IFPI-Codes-POO";
+    let todosArquivos = [];
+    let codigoAtual = "";
+
+    async function carregarRepositorio() {
+      const res = await fetch(`https://github.com{usuario}/${repo}/git/trees/main?recursive=1`);
+      const dados = await res.json();
+      todosArquivos = (dados.tree || []).filter(item => item.path.endsWith(".java"));
+      renderizarMenu(todosArquivos);
+    }
+
+    function renderizarMenu(arquivos) {
+      const aside = document.getElementById("lista-arquivos");
+      if (!arquivos.length) { aside.innerHTML = '<p class="vazio">Nenhum arquivo .java encontrado.</p>'; return; }
+      const grupos = {};
+      arquivos.forEach(arq => {
+        const partes = arq.path.split("/");
+        const nomeArq = partes.pop();
+        const pasta = partes.slice(-1)[0] || "Raiz";
+        if (!grupos[pasta]) grupos[pasta] = [];
+        grupos[pasta].push({ nome: nomeArq, path: arq.path });
+      });
+      aside.innerHTML = Object.keys(grupos).sort().map(pasta => `
+        <div class="pasta">
+          <div class="pasta-titulo">📁 ${pasta}</div>
+          ${grupos[pasta].map(a => `<button class="arquivo" onclick="abrirArquivo('${a.path}', this)">☕ ${a.nome}</button>`).join("")}
+        </div>
+      `).join("");
+    }
+
+    async function abrirArquivo(path, btn) {
+      document.querySelectorAll(".arquivo").forEach(b => b.classList.remove("ativo"));
+      if (btn) btn.classList.add("ativo");
+      const res = await fetch(`https://githubusercontent.com{usuario}/${repo}/main/${path}`);
+      codigoAtual = await res.text();
+      document.getElementById("cabecalho-codigo").style.display = "flex";
+      document.getElementById("nome-arquivo").textContent = path;
+      document.getElementById("area-codigo").innerHTML = `<pre><code class="language-java">${codigoAtual.replace(/</g, "&lt;")}</code></pre>`;
+      hljs.highlightAll();
+    }
+
+    function copiarCodigo() {
+      navigator.clipboard.writeText(codigoAtual);
+      const btn = document.querySelector(".btn-copiar");
+      btn.textContent = "Copiado!";
+      setTimeout(() => btn.textContent = "Copiar Código", 1500);
+    }
+
+    document.getElementById("busca").addEventListener("input", e => {
+      const termo = e.target.value.toLowerCase();
+      renderizarMenu(todosArquivos.filter(a => a.path.toLowerCase().includes(termo)));
+    });
+
+    carregarRepositorio();
+  </script>
+</body>
+</html>
