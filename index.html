@@ -26,7 +26,7 @@
     .btn-copiar:hover { opacity: 0.9; }
     pre { border-radius: 10px; overflow-x: auto; border: 1px solid var(--border); }
     code { font-family: 'Fira Code', 'Consolas', monospace; font-size: 0.92rem; line-height: 1.5; }
-    .vazio { color: var(--muted); text-align: center; margin-top: 4rem; }
+    .vazio { color: var(--muted); text-align: center; margin-top: 2rem; font-size: 0.9rem; line-height: 1.5; }
     @media (max-width: 768px) { main { grid-template-columns: 1fr; } aside, section.viewer { max-height: none; } }
   </style>
 </head>
@@ -52,14 +52,25 @@
   <script>
     const usuario = "MarcosIdalino-netizen";
     const repo = "IFPI-Codes-POO";
+    const apiBase = "https://" + "://github.com";
+    const rawBase = "https://" + "://githubusercontent.com";
     let todosArquivos = [];
     let codigoAtual = "";
 
     async function carregarRepositorio() {
-      const res = await fetch(`https://github.com{usuario}/${repo}/git/trees/main?recursive=1`);
-      const dados = await res.json();
-      todosArquivos = (dados.tree || []).filter(item => item.path.endsWith(".java"));
-      renderizarMenu(todosArquivos);
+      const aside = document.getElementById("lista-arquivos");
+      try {
+        const res = await fetch(apiBase + usuario + "/" + repo + "/git/trees/main?recursive=1");
+        if (!res.ok) {
+          aside.innerHTML = `<p class="vazio">Erro ${res.status} ao ler repositório.</p>`;
+          return;
+        }
+        const dados = await res.json();
+        todosArquivos = (dados.tree || []).filter(item => item.path.endsWith(".java"));
+        renderizarMenu(todosArquivos);
+      } catch (e) {
+        aside.innerHTML = '<p class="vazio">Erro de conexão ao buscar arquivos.</p>';
+      }
     }
 
     function renderizarMenu(arquivos) {
@@ -69,7 +80,7 @@
       arquivos.forEach(arq => {
         const partes = arq.path.split("/");
         const nomeArq = partes.pop();
-        const pasta = partes.slice(-1)[0] || "Raiz";
+        const pasta = partes.length ? partes[partes.length - 1] : "Raiz";
         if (!grupos[pasta]) grupos[pasta] = [];
         grupos[pasta].push({ nome: nomeArq, path: arq.path });
       });
@@ -84,7 +95,7 @@
     async function abrirArquivo(path, btn) {
       document.querySelectorAll(".arquivo").forEach(b => b.classList.remove("ativo"));
       if (btn) btn.classList.add("ativo");
-      const res = await fetch(`https://githubusercontent.com{usuario}/${repo}/main/${path}`);
+      const res = await fetch(rawBase + usuario + "/" + repo + "/main/" + path);
       codigoAtual = await res.text();
       document.getElementById("cabecalho-codigo").style.display = "flex";
       document.getElementById("nome-arquivo").textContent = path;
